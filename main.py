@@ -1,7 +1,3 @@
-# Hello to both GitHub and Connors Laptop!! Am I working
-# Can you receive me?? COnnors Laptop
-
-
 # Imports here
 
 from motor_control import *
