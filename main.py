@@ -1,12 +1,12 @@
 # Imports here
-
 from motor_control import *
+import struct
+
+# Initializing Variables
+pi_buf = bytearray(6)
+speed0 = 0
 
 # --------------------- ENTRY POINT TO THE PITCH MASTER SCRIPT ----------------------
-
-# Strictly using console commands
-
-selected_waveform, operating_speed, ramp_time = command_speed()
 
 while True:
     command = input("\nType the command you would like to execute: ")
@@ -19,9 +19,11 @@ start = runs the motor start up sequence
 stop = runs the motor stop sequence
 exit = exits the program''')
         case "command":
-            command_speed()
+            pi_buf = command_speed(pi_buf)
         case "start":
-            start_sequence(operating_speed, ramp_time)
+            pi_buf = start_sequence(pi_buf)
+        case "buf":
+            print(pi_buf,list(pi_buf))
         case "exit":
             break
 
