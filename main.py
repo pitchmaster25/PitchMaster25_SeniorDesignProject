@@ -22,6 +22,8 @@ exit = exits the program''')
             pi_buf = command_speed(pi_buf)
         case "start":
             pi_buf = start_sequence(pi_buf)
+        case "stop":
+            pi_buf = stop_sequence(pi_buf)
         case "buf":
             print(pi_buf,list(pi_buf))
         case "exit":
