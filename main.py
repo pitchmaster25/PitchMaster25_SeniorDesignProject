@@ -1,5 +1,5 @@
 # Imports here
-from motor_control import *
+import motor_control
 import struct
 
 # Initializing Variables
