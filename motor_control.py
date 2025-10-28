@@ -1,6 +1,6 @@
 # Import libraries here
 import struct
-#from smbus2 import SMBus
+from smbus2 import SMBus
 
 # ------------------------- Initialize Properties -------------------------------
 #sample_rate = 480
@@ -32,8 +32,18 @@ def start_sequence (buf):
     # Fills the 1st position with the command to the PICO
     buf[0] = 0x01 # 0x01 = start_sequence
 
-    #with SMBus(1) as bus:
-        #bus.write_byte_data(pico_add, 0, buf)
+    with SMBus(1) as bus:
+        bus.write_i2c_block_data(pico_add, 0, buf)
+
+    print("\nMotor commanded properly! Buffer:", list(buf))
+    return buf
+
+def stop_sequence (buf):
+    # Fills the 1st position with the command to the PICO
+    buf[0] = 0x02 # 0x01 = start_sequence
+
+    with SMBus(1) as bus:
+        bus.write_i2c_block_data(pico_add, 0, buf)
 
     print("\nMotor commanded properly! Buffer:", list(buf))
     return buf
