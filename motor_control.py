@@ -212,13 +212,14 @@ def capture_and_read_hlfb(bus):
             
             print(f"DEBUG: Type of cmd_buf is {type(cmd_buf)}")
             bus.write_i2c_block_data(I2C_PICO_ADDR, 0, cmd_buf)
+            time.sleep(0.001)
 
             # 4b. Immediately read back the chunk
             data_buf = bus.read_i2c_block_data(I2C_PICO_ADDR, 0, I2C_BUFFER_SIZE)
 
             if data_buf[0] == STATUS_HLFB_DATA_CHUNK:
                 # Unpack the 4-byte float (Little-Endian '<f') from offset 1
-                val = struct.unpack_from('<f', data_buf, 1)[0]
+                val = struct.unpack_from('<f', bytearray(data_buf), 1)[0]
                 results.append(val)
             else:
                 print(f"Error: Expected DATA_CHUNK at offset {offset}, got {hex(data_buf[0])}")
@@ -229,6 +230,8 @@ def capture_and_read_hlfb(bus):
         for i, val in enumerate(results):
             print(f"Sample {i:03d}: {val:.6f}")
         print("----------------------------")
+        
+        return results
 
     except ValueError:
         print("Error: Invalid input. Please enter a number.")
