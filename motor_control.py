@@ -206,7 +206,7 @@ def capture_and_read_hlfb(bus):
             cmd_buf[1] = offset & 0xFF  # Offset LSB
             cmd_buf[2] = (offset >> 8) & 0xFF  # Offset MSB
 
-            bus.write_i2c_block_data(I2C_PICO_ADDR, 0, list(cmd_buf))
+            bus.write_i2c_block_data(I2C_PICO_ADDR, 0, cmd_buf)
 
             # 4b. Immediately read back the chunk
             data_buf = bus.read_i2c_block_data(I2C_PICO_ADDR, 0, I2C_BUFFER_SIZE)
