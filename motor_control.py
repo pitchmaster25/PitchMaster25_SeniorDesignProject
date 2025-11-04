@@ -6,18 +6,18 @@ from smbus2 import SMBus
 # I2C
 I2C_PICO_ADDR = 0x50  # 80 in decimal
 
-# Buffer Commands (from Pi5)
+# Buffer Commands (Pi5 -> Pico)
 CMD_START_SEQUENCE = 1
 CMD_STOP_SEQUENCE = 2
 CMD_RECORD_HLFB = 3
 CMD_READ_HLFB_CHUNK = 4  # Pi5 requests a 4-byte chunk of data
 
 # I2C Status Codes (Pico -> Pi5)
-STATUS_MOTOR_RUNNING = 0x01
-STATUS_MOTOR_STOPPED = 0x02
-STATUS_HLFB_RECORDED = 0x03  # Capture is done, data is ready for chunked read
-STATUS_HLFB_CAPTURING = 0x04  # Capture is in progress, Pi5 should wait
-STATUS_HLFB_DATA_CHUNK = 0x05  # This response contains a 4-byte data chunk
+STATUS_MOTOR_RUNNING = 0x11
+STATUS_MOTOR_STOPPED = 0x12
+STATUS_HLFB_RECORDED = 0x13  # Capture is done, data is ready for chunked read
+STATUS_HLFB_CAPTURING = 0x14  # Capture is in progress, Pi5 should wait
+STATUS_HLFB_DATA_CHUNK = 0x15  # This response contains a 4-byte data chunk
 STATUS_ERROR = 0xFF  # General error (e.g., bad command, bad offset)
 
 # Sizing
@@ -113,7 +113,7 @@ def start_motor(bus, max_speed):
         # 4. Send command and read status
         confirm = input("Would you like to start sequence? (y/n): ")
         if confirm.lower().strip() == 'y':
-            bus.write_i2c_block_data(I2C_PICO_ADDR, 0, list(buf))
+            bus.write_i2c_block_data(I2C_PICO_ADDR, 0, buf)
 
             # Give the Pico a moment to process (optional, but safe)
             time.sleep(0.01)
@@ -143,7 +143,7 @@ def stop_motor(bus):
         print(f"Sending command buffer: {list(buf)}")
 
         # Send command
-        bus.write_i2c_block_data(I2C_PICO_ADDR, 0, list(buf))
+        bus.write_i2c_block_data(I2C_PICO_ADDR, 0, buf)
 
         # Give the Pico a moment to process
         time.sleep(0.01)
@@ -175,7 +175,8 @@ def capture_and_read_hlfb(bus):
         buf[1] = num_samples
 
         print(f"Sending command buffer: {list(buf)}")
-        bus.write_i2c_block_data(I2C_PICO_ADDR, 0, list(buf))
+        bus.write_i2c_block_data(I2C_PICO_ADDR, 0, buf)
+        time.sleep(1)  # Wait 100ms before polling again
 
         # 2. Poll for "Capture Done" status
         print("Waiting for Pico to finish capture...")
@@ -194,6 +195,9 @@ def capture_and_read_hlfb(bus):
             elif status == STATUS_ERROR:
                 print("\nPico reported an error.")
                 return
+            elif status == CMD_RECORD_HLFB: # <--- This line likely had the inconsistent indentation
+                print("\nPico is not ready for me. Must wait.")
+                time.sleep(1)  # Wait 100ms before polling again
             else:
                 print(f"\nUnexpected status {hex(status)} while waiting.")
                 return
@@ -218,15 +222,17 @@ def capture_and_read_hlfb(bus):
             cmd_buf[0] = CMD_READ_HLFB_CHUNK
             cmd_buf[1] = offset & 0xFF  # Offset LSB
             cmd_buf[2] = (offset >> 8) & 0xFF  # Offset MSB
-
+            
+            print(f"DEBUG: Type of cmd_buf is {type(cmd_buf)}")
             bus.write_i2c_block_data(I2C_PICO_ADDR, 0, cmd_buf)
+            time.sleep(0.001)
 
             # 4b. Immediately read back the chunk
             data_buf = bus.read_i2c_block_data(I2C_PICO_ADDR, 0, I2C_BUFFER_SIZE)
 
             if data_buf[0] == STATUS_HLFB_DATA_CHUNK:
                 # Unpack the 4-byte float (Little-Endian '<f') from offset 1
-                val = struct.unpack_from('<f', data_buf, 1)[0]
+                val = struct.unpack_from('<f', bytearray(data_buf), 1)[0]
                 results.append(val)
             else:
                 print(f"Error: Expected DATA_CHUNK at offset {offset}, got {hex(data_buf[0])}")
@@ -237,6 +243,8 @@ def capture_and_read_hlfb(bus):
         for i, val in enumerate(results):
             print(f"Sample {i:03d}: {val:.6f}")
         print("----------------------------")
+        
+        return results
 
     except ValueError:
         print("Error: Invalid input. Please enter a number.")

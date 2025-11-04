@@ -43,7 +43,8 @@ def main():
 
                 case "hlfb":
                     # New command to test the feedback capture
-                    motor_control.capture_and_read_hlfb(bus)
+                    hlfb_data = motor_control.capture_and_read_hlfb(bus)
+                    print(f"\nSuccessfully captured {len(hlfb_data)} data points.")
 
                 case "save":
                     # Saves the data collected into a CSV file by running this program
