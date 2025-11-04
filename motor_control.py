@@ -55,7 +55,20 @@ def close_bus(bus):
 
 # ----------------- Motor Control Functions ------------------
 
-def start_motor(bus):
+def configure_motor():
+    print("\n--- Configure Motor ---")
+    while True:
+        try:
+            max_speed = int(input("Specify the max speed (rpm): "))
+
+        except ValueError:
+            print("Value is not a valid number. Please try again.")
+
+        else:
+            print("Properly defined.")
+            return max_speed
+
+def start_motor(bus, max_speed):
     """
     Asks the user for motor parameters and sends the
     CMD_START_SEQUENCE command to the Pico.
@@ -63,7 +76,6 @@ def start_motor(bus):
     print("\n--- Start Motor Sequence ---")
     try:
         # 1. Get user input
-        max_speed = int(input("Specify the max speed (rpm): "))
         operating_speed = float(input("Specify the operating speed (Hz): "))
 
         # This prompt is updated to reflect what the Pico code is actually doing.
@@ -116,7 +128,8 @@ def start_motor(bus):
         print("Error: Invalid input. Please enter numbers.")
     except Exception as e:
         print(f"An I2C error occurred: {e}")
-
+    else:
+        return operating_speed
 
 def stop_motor(bus):
     """
