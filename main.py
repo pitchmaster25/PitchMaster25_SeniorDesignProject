@@ -1,6 +1,7 @@
 # Imports here
 import motor_control
-from PitchMaster25_SeniorDesignProject.motor_control import configure_motor
+import save_data_to_csv
+# from PitchMaster25_SeniorDesignProject.motor_control import configure_motor
 
 # Hello 11/4/25
 # --------------------- ENTRY POINT TO THE PITCH MASTER SCRIPT ----------------------
@@ -16,9 +17,13 @@ def main():
     if bus is None:
         print("Failed to initialize I2C bus. Exiting.")
         return
+    
+    angle_data = ["null"]
+    hlfb_data = ["null"]
+    speed = 0
 
     try:
-        max_speed = configure_motor()
+        max_speed = motor_control.configure_motor()
         while True:
             command = input("\nType the command (start, stop, hlfb, save, help, exit): ")
             match command:
@@ -31,7 +36,10 @@ def main():
     exit  = Exits the program''')
 
                 case "config":
-                    max_speed = configure_motor()
+                    max_speed = motor_control.configure_motor()
+                    angle_data = ["null"]
+                    hlfb_data = ["null"]
+                    speed = 0
 
                 case "start":
                     # This function now handles getting user input AND
@@ -44,11 +52,13 @@ def main():
                 case "hlfb":
                     # New command to test the feedback capture
                     hlfb_data = motor_control.capture_and_read_hlfb(bus)
+                    angle_data = hlfb_data[:]
                     print(f"\nSuccessfully captured {len(hlfb_data)} data points.")
 
                 case "save":
                     # Saves the data collected into a CSV file by running this program
                     print("WIP")
+                    save_data_to_csv.save(speed, angle_data, hlfb_data)
 
                 case "exit":
                     # Stop the motor before exiting, just in case

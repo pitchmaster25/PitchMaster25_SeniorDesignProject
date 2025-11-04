@@ -26,7 +26,7 @@ def select_directory():
         root.destroy() # Cleans up Tkinter window; prevents resource leaks.
 
 def compile_data(speed, samples, date, angle_data, hlfb_data):
-    data_points = len(encoder_data)
+    data_points = len(hlfb_data)
     input_data = [
         ["Inputs",          "",        "",],
         ["Speed (Hz)",      "Samples",  "Date"],
@@ -44,39 +44,34 @@ def compile_data(speed, samples, date, angle_data, hlfb_data):
 
 
 # -------- Start of Program ---------
+def save(operating_speed, encoder_data, motor_data):
+	num_of_samples = len(motor_data)
+	current_date = datetime.datetime.now()
 
-# Dummy data to test the code
-operating_speed = 30
-num_of_samples = 8
-current_date = datetime.datetime.now()
-encoder_data = [10,11,12,13,14]
-motor_data = [20,21,22,23,24]
+	print("\n---- Saving Data to CSV ----\n")
 
-print("\n---- Saving Data to CSV ----\n")
+	file_path = select_directory()  # Run select directory function and store the file path
 
-file_path = select_directory()  # Run select directory function and store the file path
+	# Only proceed if a file path was returned
+	if file_path:
+		try:
+			# 1. Compile the data first
+			data = compile_data(operating_speed, num_of_samples, current_date, encoder_data, motor_data)
 
-# Only proceed if a file path was returned
-if file_path:
-    try:
-        # 1. Compile the data first
-        data = compile_data(operating_speed, num_of_samples, current_date, encoder_data, motor_data)
+			# 2. Open the file to write
+			with open(file_path, mode='w', newline='') as file:
+				writer = csv.writer(file)
+				writer.writerows(data)
 
-        # 2. Open the file to write
-        with open(file_path, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerows(data)
+			print(f"\nCSV file created successfully!")
 
-        print(f"\nCSV file created successfully!")
+		# --- Add specific error handling ---
+		except PermissionError:
+			print(f"\nError: You do not have permission to write to this file. Close the file if you currently have it open.")
+			print(f"File path: {file_path}")
+		except Exception as e:
+			# This catches any other errors (e.g., from compile_data)
+			print(f"\nAn unexpected error occurred: {e}")
 
-    # --- Add specific error handling ---
-    except PermissionError:
-        print(f"\nError: You do not have permission to write to this file. Close the file if you currently have it open.")
-        print(f"File path: {file_path}")
-    except Exception as e:
-        # This catches any other errors (e.g., from compile_data)
-        print(f"\nAn unexpected error occurred: {e}")
-
-else: # If no directory was selected, end the program gracefully.
-    print("No directory selected. Ending Program.")
-    sys.exit()
+	else: # If no directory was selected, end the program gracefully.
+		print("No directory selected. Ending Program.")
