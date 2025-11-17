@@ -15,7 +15,7 @@ def main():
 
     # If bus init failed, exit
     if bus is None:
-        print("Failed to initialize I2C bus. Exiting.")
+        print("Failed to initialize I2C bus. Exiting.") 
         return
     
     angle_data = ["null"]

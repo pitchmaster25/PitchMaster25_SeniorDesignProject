@@ -59,7 +59,7 @@ def configure_motor():
     print("\n--- Configure Motor ---")
     while True:
         try:
-            max_speed = int(input("Specify the max speed (rpm): "))
+            max_speed = float(input("Specify the max speed (rpm): "))
 
         except ValueError:
             print("Value is not a valid number. Please try again.")
@@ -97,6 +97,17 @@ def start_motor(bus, max_speed):
             return
 
         cmd_speed16 = round(duty_cycle_float * 65535)  # Use 65535 for full 16-bit range
+        
+        # Get the direction of the motor
+        direction_string = input("Specify the direction of rotation (cw for clockwise, ccw for counter-clockwise):")
+        match direction_string:
+            case "cw":
+                direction = 0
+            case "ccw":
+                direction = 1
+            case _:
+                print(f"Error: Input does not follow specified parameteres {direction_string}")
+                return
 
         # 3. Build the command buffer
         # We create a 6-byte buffer, matching the Pico's.
@@ -106,6 +117,8 @@ def start_motor(bus, max_speed):
         # Pack the 16-bit speed, Big-Endian (>H), into offset 1
         struct.pack_into('>H', buf, 1, cmd_speed16)
         buf[3] = ramp_multiplier
+        buf[4] = direction
+        
 
         print(f"\nSending command buffer: {list(buf)}")
         print(f" (16-bit speed: {cmd_speed16}, Multiplier: {ramp_multiplier})")
