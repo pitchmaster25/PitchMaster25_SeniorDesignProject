@@ -11,6 +11,7 @@ CMD_START_SEQUENCE = 1
 CMD_STOP_SEQUENCE = 2
 CMD_RECORD_HLFB = 3
 CMD_READ_HLFB_CHUNK = 4  # Pi5 requests a 4-byte chunk of data
+CMD_EMERGENCY_STOP = 5 # Brakes the motor and acts as an emergency stop
 
 # I2C Status Codes (Pico -> Pi5)
 STATUS_MOTOR_RUNNING = 0x11
@@ -168,6 +169,24 @@ def stop_motor(bus):
     except Exception as e:
         print(f"An I2C error occurred: {e}")
 
+def emergency_stop_motor(bus):
+    """
+    Sends the CMD_EMERGENCY_STOP_SEQUENCE command to the Pico.
+    """
+    print("\n--- Emergency Stop Sequence ---")
+    try:
+        buf = bytearray(I2C_BUFFER_SIZE) # Recreates the buffer full of zeros
+        buf[0] = CMD_EMERGENCY_STOP # Puts the encoded command into the first index
+        bus.write_i2c_block_data(I2C_PICO_ADDR, 0, buf) # Immediately sends the command to PICO1
+        print(f"Saw an Emergency Stop command buffer: {list(buf)}") # Tells the user it saw an emergency stop command
+        
+        time.sleep(0.01) # Give the Pico a moment to process
+
+        status_buf = bus.read_i2c_block_data(I2C_PICO_ADDR, 0, I2C_BUFFER_SIZE)  # Read the status back
+        print_pico_status(status_buf)
+
+    except Exception as e:
+        print(f"An I2C error occurred: {e}")
 
 # ----------------- HLFB Control Functions -------------------
 
