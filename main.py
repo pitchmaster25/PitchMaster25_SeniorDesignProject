@@ -25,12 +25,13 @@ def main():
     try:
         max_speed = motor_control.configure_motor()
         while True:
-            command = input("\nType the command (start, stop, hlfb, save, help, exit): ")
+            command = input("\nType the command (start, stop, hlfb, e, save, help, exit): ")
             match command:
                 case "help":
                     print('''Here are a list of the commands: 
     start = Asks for speed/ramp, then starts the motor
     stop  = Runs the motor stop sequence
+    e     = Brakes the motor with the reverse peak torque and acts like an Emergency Stop
     hlfb  = Starts HLFB capture and reads data
     save  = Saves data to a CSV file
     exit  = Exits the program''')
@@ -42,15 +43,17 @@ def main():
                     speed = 0
 
                 case "start":
-                    # This function now handles getting user input AND
-                    # sending the command.
                     speed = motor_control.start_motor(bus, max_speed)
 
                 case "stop":
-                    max_speed = motor_control.stop_motor(bus)
+                    # max_speed = motor_control.stop_motor(bus)
+                    motor_control.stop_motor(bus)
+
+                case "e":
+                    motor_control.emergency_stop_motor(bus)
 
                 case "hlfb":
-                    # New command to test the feedback capture
+                    # Test the feedback capture
                     hlfb_data = motor_control.capture_and_read_hlfb(bus)
                     angle_data = hlfb_data[:]
                     print(f"\nSuccessfully captured {len(hlfb_data)} data points.")
