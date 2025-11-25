@@ -62,6 +62,7 @@ def main():
     start    = Start motor
     stop     = Stop motor
     e        = Emergency Brake
+    pos      = Reads the current position
     arm      = Arms Pico 2 to record encoder on triggers
     read_enc = Downloads recorded encoder data from Pico 2
     hlfb     = Capture HLFB data
@@ -84,7 +85,13 @@ def main():
                 case "e":
                     motor_control.emergency_stop_motor(bus)
                     
-                case "int":
+                case "pos":
+                    # Grab one sample immediately
+                    val = encoder_control.read_single_sample(bus)
+                    if val is not None:
+                        print(f"Current Position: {val}")
+                    else:
+                        print("Failed to read position.")
                     
                 case "arm":
                     encoder_control.arm_encoder(bus)
@@ -100,7 +107,6 @@ def main():
                         print(f"First 5 samples: {encoder_data[:5]}")
                     else:
                         print("No data retrieved.")
-                # --------------------------------------------------
 
                 case "hlfb":
                     hlfb_data = motor_control.capture_and_read_hlfb(bus)
