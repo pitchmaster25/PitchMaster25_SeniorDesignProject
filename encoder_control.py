@@ -8,10 +8,13 @@ CMD_RECORD = 0x21
 CMD_READ_CHUNK = 0x22
 CMD_SINGLE_SHOT = 0x23
 
+STATUS_ENCODER_IDLE = 0x31
 STATUS_CAPTURING = 0x32
 STATUS_READY = 0x33
 STATUS_CHUNK = 0x34
 STATUS_SINGLE_SHOT_READY = 0x35
+
+I2C_BUFFER_SIZE = 6
 
 def read_single_sample(i2c_bus):
     """
@@ -20,15 +23,24 @@ def read_single_sample(i2c_bus):
     """
     try:
         # 1. Send the Single Shot Command
-        i2c_bus.write_i2c_block_data(PICO2_ADDR, CMD_SINGLE_SHOT, [])
+        buf = bytearray(6)
+        buf[0] = CMD_SINGLE_SHOT
+        
+        i2c_bus.write_i2c_block_data(PICO2_ADDR, 0, buf)
         time.sleep(0.01)
         block = i2c_bus.read_i2c_block_data(PICO2_ADDR, 0, 5) # Read back 5 bytes (Status + 4 bytes of integer)
         status = block[0]
+        
+        #while status == STATUS_ENCODER_IDLE:
+            #time.sleep(0.01)
+            #block = i2c_bus.read_i2c_block_data(PICO2_ADDR, 0, 5) # Read back 5 bytes (Status + 4 bytes of integer)
+            #status = block[0]
         
         if status == STATUS_SINGLE_SHOT_READY:
             # struct.unpack returns a tuple, so we grab [0]
             val = struct.unpack('I', bytes(block[1:5]))[0]
             return val
+        
         else:
             print(f"[Encoder] Single shot failed. Status: {hex(status)}")
             return None
