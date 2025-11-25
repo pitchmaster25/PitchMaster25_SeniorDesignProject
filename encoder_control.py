@@ -3,20 +3,28 @@ import struct
 
 # --- PICO 2 CONFIGURATION ---
 PICO2_ADDR = 0x60 # 96 Decimal
+
 CMD_RECORD = 0x21
 CMD_READ_CHUNK = 0x22
+CMD_SINGLE_SHOT = 0x23
+
+STATUS_CAPTURING = 0x32
 STATUS_READY = 0x33
 STATUS_CHUNK = 0x34
-STATUS_CAPTURING = 0x32
+STATUS_SINGLE_SHOT_READY = 0x35
 
-def arm_encoder(i2c_bus, samples=256):
+def arm_encoder(i2c_bus):
     """
     Sends the command to Pico 2 to arm the trigger and prepare for recording.
     """
     try:
+        samples = int(input("Enter number of samples to record (default 200): ") or "200")
         print(f"[Encoder] Sending ARM command to Pico 2 ({samples} samples)...")
         # Protocol: [CMD, NUM_SAMPLES]
-        i2c_bus.write_i2c_block_data(PICO2_ADDR, CMD_RECORD, [samples])
+        buf = bytearray(6)
+        buf[0] = CMD_RECORD
+        buf[1] = samples
+        i2c_bus.write_i2c_block_data(PICO2_ADDR, 0, buf)
         time.sleep(0.1) 
         print("[Encoder] Armed. Waiting for triggers...")
         return True

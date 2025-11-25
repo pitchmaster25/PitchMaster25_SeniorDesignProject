@@ -83,14 +83,11 @@ def main():
 
                 case "e":
                     motor_control.emergency_stop_motor(bus)
-
-                # --- ENCODER COMMANDS (Calling separate module) ---
+                    
+                case "int":
+                    
                 case "arm":
-                    try:
-                        count = int(input("Enter number of samples to record (default 200): ") or "200")
-                        encoder_control.arm_encoder(bus, count)
-                    except ValueError:
-                        print("Invalid number.")
+                    encoder_control.arm_encoder(bus)
 
                 case "read_enc":
                     print("Attempting to read data from Pico 2...")
