@@ -2,6 +2,121 @@ import struct
 import time
 from smbus2 import SMBus
 
+
+# --- Dummy I2C Bus for dev-mode (emulation) -----------------
+class DummyBus:
+    """A simple I2C bus emulator that responds to the project's basic commands.
+
+    This is intentionally minimal: it returns plausible status buffers so the
+    higher-level logic in `motor_control` and `encoder_control` can run without
+    physical hardware.
+    """
+    def __init__(self):
+        self._last_write = {}
+        # Memory per address for emulated devices
+        self._memory = {}
+        # Prepare some default encoder data for pico2 (address 0x60)
+        self._encoder_samples = [i * 10 for i in range(200)]
+
+    def write_i2c_block_data(self, addr, register, data):
+        # store last write for the address so read logic can inspect it
+        self._last_write[addr] = (register, bytes(data) if isinstance(data, (bytes, bytearray)) else bytes(data))
+
+        # If writing to Pico2 (encoder) with CMD_RECORD, populate memory
+        if addr == 0x60:
+            if len(data) >= 2 and data[0] == 0x21:  # CMD_RECORD
+                samples = data[1] or 200
+                # prepare bytes (signed ints) for samples
+                b = bytearray()
+                for i in range(samples):
+                    val = self._encoder_samples[i % len(self._encoder_samples)]
+                    b.extend(struct.pack('<i', val))
+                self._memory[addr] = bytes(b)
+
+        return None
+
+    def read_i2c_block_data(self, addr, register, length):
+        # Inspect last write to decide what to return
+        last = self._last_write.get(addr)
+
+        # Emulated Pico (HLFB) at 0x50
+        if addr == 0x50:
+            if last:
+                reg, data = last
+                cmd = data[0]
+                # If the last command was record HLFB, report that capture is done
+                if cmd == 3:  # CMD_RECORD_HLFB
+                    num = data[1] if len(data) > 1 else 10
+                    total_bytes = num * 4
+                    # STATUS_HLFB_RECORDED
+                    return [0x13, num, total_bytes & 0xFF, (total_bytes >> 8) & 0xFF, 0, 0][:length]
+                elif cmd == 4:  # CMD_READ_HLFB_CHUNK
+                    # data[1:3] contain offset
+                    # Return STATUS_HLFB_DATA_CHUNK + 4-byte little-endian float
+                    # Generate a simple waveform value based on offset
+                    offset = data[1] | (data[2] << 8)
+                    value = float(offset) / 4.0
+                    b = bytearray(6)
+                    b[0] = 0x15  # STATUS_HLFB_DATA_CHUNK
+                    struct.pack_into('<f', b, 1, value)
+                    return list(b)[:length]
+                elif cmd == 5:  # CMD_EMERGENCY_STOP
+                    return [0x12, 0, 0, 0, 0, 0][:length]  # STATUS_MOTOR_STOPPED
+                elif cmd == 1:  # CMD_START_SEQUENCE
+                    # pretend motor is running, return a speed value
+                    speed = 1234
+                    return [0x11, (speed >> 8) & 0xFF, speed & 0xFF, 0, 0, 0][:length]
+
+            # Default status (idle)
+            return [0x12, 0, 0, 0, 0, 0][:length]
+
+        # Emulated Pico2 (encoder) at 0x60
+        if addr == 0x60:
+            if last:
+                reg, data = last
+                cmd = data[0]
+                if cmd == 0x23:  # CMD_SINGLE_SHOT
+                    # return STATUS_SINGLE_SHOT_READY + 4-byte unsigned int
+                    val = 123456
+                    b = bytearray(5)
+                    b[0] = 0x35  # STATUS_SINGLE_SHOT_READY
+                    struct.pack_into('<I', b, 1, val)
+                    return list(b)[:length]
+                elif cmd == 0x21:  # CMD_RECORD
+                    mem = self._memory.get(addr, b'')
+                    total_bytes = len(mem)
+                    # STATUS_READY with total_bytes in bytes 1-2
+                    return [0x33, total_bytes & 0xFF, (total_bytes >> 8) & 0xFF, 0, 0, 0][:length]
+
+            # If a read chunk was requested, return STATUS_CHUNK + 4 bytes from memory
+            # We attempt to locate the last register used to request the chunk
+            # Some calls use write_i2c_block_data with register==CMD_READ_CHUNK and payload [lsb, msb]
+            # Try to find a chunk request in last_write
+            if last and isinstance(last[1], (bytes, bytearray)):
+                payload = last[1]
+                if len(payload) >= 3 and payload[0] == 0x22:  # CMD_READ_CHUNK
+                    lsb = payload[1]
+                    msb = payload[2]
+                    offset = lsb | (msb << 8)
+                    mem = self._memory.get(addr, b'')
+                    chunk = mem[offset:offset+4]
+                    if len(chunk) < 4:
+                        chunk = chunk.ljust(4, b'\x00')
+                    b = bytearray(6)
+                    b[0] = 0x34  # STATUS_CHUNK
+                    b[1:5] = chunk
+                    return list(b)[:length]
+
+            return [0x31, 0, 0, 0, 0, 0][:length]
+
+        # Default: return zeros
+        return [0] * length
+
+    def close(self):
+        # No resources to free in the dummy bus
+        return
+
+
 # ------------------------ Constants -------------------------
 # I2C
 I2C_PICO_ADDR = 0x50  # 80 in decimal
@@ -27,10 +142,16 @@ I2C_BUFFER_SIZE = 6  # Must match the Pico's i2c_mem_buf size
 
 # ----------------- Bus Control Functions ------------------
 
-def init_bus():
+def init_bus(dev_mode: bool = False):
     """
     Initializes and returns the I2C bus object.
+    If `dev_mode` is True, returns a `DummyBus` emulation instance so the
+    application can run without physical I2C hardware.
     """
+    if dev_mode:
+        print("Dev mode enabled: using DummyBus I2C emulator.")
+        return DummyBus()
+
     try:
         bus = SMBus(1)
         print("I2C Bus 1 opened.")

@@ -1,0 +1,18 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Explicitly ignore all files inside any __pycache__ directories (including nested)
+__pycache__/*
+/**/__pycache__/*
+
+# VS Code settings and workspace
+.vscode/
+
+# Virtual environment
+.venv/
+env/
+
+# macOS
+.DS_Store

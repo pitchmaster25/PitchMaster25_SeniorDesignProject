@@ -1,0 +1,5 @@
+gpiozero
+smbus2
+numpy
+scipy
+matplotlib
