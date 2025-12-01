@@ -1,5 +1,6 @@
 import time
 import struct
+from smbus2 import SMBus, i2c_msg
 
 # --- PICO 2 CONFIGURATION ---
 PICO2_ADDR = 0x60 # 96 Decimal
@@ -105,7 +106,11 @@ def read_encoder_data(i2c_bus):
                 time.sleep(0.005) 
                 
                 # Read response
-                chunk_block = i2c_bus.read_i2c_block_data(PICO2_ADDR, 0, 6)
+                read_msg= i2c_msg.read(PICO2_ADDR, 6)
+                i2c_bus.i2c_rdwr(read_msg)
+                
+                # chunk_block = i2c_bus.read_i2c_block_data(PICO2_ADDR, CMD_READ_CHUNK, 6)
+                chunk_block = list(read_msg)
                 chunk_status = chunk_block[0]
                 
                 if chunk_status == STATUS_CHUNK:
