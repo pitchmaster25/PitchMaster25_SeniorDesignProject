@@ -28,18 +28,19 @@ def read_single_sample(i2c_bus):
         buf[0] = CMD_SINGLE_SHOT
         
         i2c_bus.write_i2c_block_data(PICO2_ADDR, 0, buf)
+        
+        # Wait 10ms for Pico to perform the SPI Triple-Read
         time.sleep(0.01)
-        block = i2c_bus.read_i2c_block_data(PICO2_ADDR, 0, 5) # Read back 5 bytes (Status + 4 bytes of integer)
+        
+        # Read back 5 bytes (Status [0] + 4 bytes of integer [1-4])
+        block = i2c_bus.read_i2c_block_data(PICO2_ADDR, 0, 5) 
         status = block[0]
         
-        #while status == STATUS_ENCODER_IDLE:
-            #time.sleep(0.01)
-            #block = i2c_bus.read_i2c_block_data(PICO2_ADDR, 0, 5) # Read back 5 bytes (Status + 4 bytes of integer)
-            #status = block[0]
-        
         if status == STATUS_SINGLE_SHOT_READY:
-            # struct.unpack returns a tuple, so we grab [0]
-            val = struct.unpack('I', bytes(block[1:5]))[0]
+            # CHANGE 1: Used '<i'
+            # < : Little Endian (Standard for ARM/Pico)
+            # i : Signed Integer (Allows you to see -1 error codes)
+            val = struct.unpack('<i', bytes(block[1:5]))[0]
             return val
         
         else:
@@ -52,18 +53,19 @@ def read_single_sample(i2c_bus):
 def arm_encoder(i2c_bus, samples: int = None):
     """
     Sends the command to Pico 2 to arm the trigger and prepare for recording.
-    If `samples` is provided it will be used; otherwise the function will
-    prompt the user (backwards-compatible).
     """
     try:
         if samples is None:
             samples = int(input("Enter number of samples to record (default 200): ") or "200")
+        
         print(f"[Encoder] Sending ARM command to Pico 2 ({samples} samples)...")
+        
         # Protocol: [CMD, NUM_SAMPLES]
         buf = bytearray(6)
         buf[0] = CMD_RECORD
         buf[1] = samples
         i2c_bus.write_i2c_block_data(PICO2_ADDR, 0, buf)
+        
         time.sleep(0.1) 
         print("[Encoder] Armed. Waiting for triggers...")
         return True
@@ -75,13 +77,9 @@ def read_encoder_data(i2c_bus):
     """
     Polls Pico 2 for status. If ready, downloads data in 4-byte chunks
     and reconstructs the list of integers.
-    
-    Returns:
-        list: A list of integers (encoder positions), or empty list if failed/busy.
     """
     try:
         # 1. Check Status
-        # We read 6 bytes just to be safe, though we only need the first few for status
         status_block = i2c_bus.read_i2c_block_data(PICO2_ADDR, 0, 6)
         status = status_block[0]
         
@@ -100,7 +98,6 @@ def read_encoder_data(i2c_bus):
             # 3. Chunk Loop
             while offset < total_bytes:
                 # Request chunk at specific offset
-                # Protocol: [CMD, OFFSET_LSB, OFFSET_MSB]
                 lsb = offset & 0xFF
                 msb = (offset >> 8) & 0xFF
                 i2c_bus.write_i2c_block_data(PICO2_ADDR, CMD_READ_CHUNK, [lsb, msb])
@@ -109,10 +106,9 @@ def read_encoder_data(i2c_bus):
                 time.sleep(0.005) 
                 
                 # Read response
-                read_msg= i2c_msg.read(PICO2_ADDR, 6)
+                read_msg = i2c_msg.read(PICO2_ADDR, 6)
                 i2c_bus.i2c_rdwr(read_msg)
                 
-                # chunk_block = i2c_bus.read_i2c_block_data(PICO2_ADDR, CMD_READ_CHUNK, 6)
                 chunk_block = list(read_msg)
                 chunk_status = chunk_block[0]
                 
@@ -125,9 +121,10 @@ def read_encoder_data(i2c_bus):
                     break
             
             # 4. Unpack Bytes to Integers
-            # 'i' means signed integer (4 bytes)
             count = len(collected_bytes) // 4
-            integers = struct.unpack(f'{count}i', collected_bytes)
+            
+            # CHANGE 2: Used '<' for Little Endian and 'i' for Signed Int
+            integers = struct.unpack(f'<{count}i', collected_bytes)
             return list(integers)
             
         else:
