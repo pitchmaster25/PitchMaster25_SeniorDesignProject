@@ -2,11 +2,15 @@ import motor_control
 import save_data_to_csv
 import encoder_control  # <--- NEW IMPORT
 import time
+import gui
 
 # Development mode toggle: when True, use MockFactory for gpiozero pins and
 # enable the Dummy I2C bus emulation in `motor_control` by passing DEV_MODE
 # into `init_bus`.
-DEV_MODE = False
+DEV_MODE = True
+
+# GUI vs Terminal toggle: set to True to launch the PySide6 GUI instead of CLI
+GUI_MODE = True
 
 # GPIO setup: use MockFactory when DEV_MODE is True; otherwise try to import
 # the native gpiozero devices. Fall back to MockFactory only if native import
@@ -36,9 +40,7 @@ else:
             print(f"Fallback MockFactory failed: {e2}")
             raise
 
-# Development mode toggle: when True, motor_control.init_bus(dev_mode=True)
-# will return an emulated I2C bus so the app can run without physical I2C.
-DEV_MODE = True
+# (DEV_MODE can be changed above; do not override it here.)
 
 # --- E-STOP CONFIGURATION ---
 E_STOP_PIN = 23
@@ -73,7 +75,8 @@ def main():
         print(f"E-stop interrupt configured on BCM pin {E_STOP_PIN}")
     except Exception as e:
         print(f"Failed to set up E-Stop interrupt: {e}")
-        return
+        print("Continuing without hardware E-Stop (DEV_MODE or missing pin factory).")
+        e_stop_button = None
 
     # Initialize the I2C bus (pass DEV_MODE to enable emulation)
     bus = motor_control.init_bus(DEV_MODE)
@@ -172,4 +175,7 @@ def main():
         motor_control.close_bus(bus)
 
 if __name__ == "__main__":
-    main()
+    if GUI_MODE:
+        gui.run_gui(DEV_MODE)
+    else:
+        main()
