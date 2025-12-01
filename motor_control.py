@@ -190,20 +190,22 @@ def configure_motor():
             print("Properly defined.")
             return max_speed
 
-def start_motor(bus, max_speed):
+def start_motor(bus, max_speed, operating_speed=None, ramp_multiplier=None, direction_string=None):
     """
     Asks the user for motor parameters and sends the
     CMD_START_SEQUENCE command to the Pico.
     """
     print("\n--- Start Motor Sequence ---")
     try:
-        # 1. Get user input
-        operating_speed = float(input("Specify the operating speed (Hz): "))
+        # 1. Get parameters (from GUI or CLI). If None, prompt interactively.
+        if operating_speed is None:
+            operating_speed = float(input("Specify the operating speed (Hz): "))
 
         # This prompt is updated to reflect what the Pico code is actually doing.
         # The Pico uses this value * RAMP_TIME_MULTIPLIER (15) as the delay_us
         # between each step in the ramp.
-        ramp_multiplier = int(input("Ramp Delay Multiplier (0-255, ~50 is slow, 1 is fast): "))
+        if ramp_multiplier is None:
+            ramp_multiplier = int(input("Ramp Delay Multiplier (0-255, ~50 is slow, 1 is fast): "))
         if not 0 <= ramp_multiplier <= 255:
             print("Error: Multiplier must be between 0 and 255.")
             return
@@ -221,7 +223,8 @@ def start_motor(bus, max_speed):
         cmd_speed16 = round(duty_cycle_float * 65535)  # Use 65535 for full 16-bit range
         
         # Get the direction of the motor
-        direction_string = input("Specify the direction of rotation (cw for clockwise, ccw for counter-clockwise):")
+        if direction_string is None:
+            direction_string = input("Specify the direction of rotation (cw for clockwise, ccw for counter-clockwise):")
         match direction_string:
             case "cw":
                 direction = 0
@@ -246,18 +249,21 @@ def start_motor(bus, max_speed):
         print(f" (16-bit speed: {cmd_speed16}, Multiplier: {ramp_multiplier})")
 
         # 4. Send command and read status
-        confirm = input("Would you like to start sequence? (y/n): ")
-        if confirm.lower().strip() == 'y':
-            bus.write_i2c_block_data(I2C_PICO_ADDR, 0, buf)
+        # If interactive (parameters were None) ask for confirmation. Otherwise proceed.
+        if operating_speed is None:
+            confirm = input("Would you like to start sequence? (y/n): ")
+            if confirm.lower().strip() != 'y':
+                print("Motor start cancelled by user.")
+                return
 
-            # Give the Pico a moment to process (optional, but safe)
-            time.sleep(0.01)
+        bus.write_i2c_block_data(I2C_PICO_ADDR, 0, buf)
 
-            # Read the status back
-            status_buf = bus.read_i2c_block_data(I2C_PICO_ADDR, 0, I2C_BUFFER_SIZE)
-            print_pico_status(status_buf)
-        else:
-            print("Motor start cancelled by user.")
+        # Give the Pico a moment to process (optional, but safe)
+        time.sleep(0.01)
+
+        # Read the status back
+        status_buf = bus.read_i2c_block_data(I2C_PICO_ADDR, 0, I2C_BUFFER_SIZE)
+        print_pico_status(status_buf)
 
     except ValueError:
         print("Error: Invalid input. Please enter numbers.")
@@ -311,13 +317,16 @@ def emergency_stop_motor(bus):
 
 # ----------------- HLFB Control Functions -------------------
 
-def capture_and_read_hlfb(bus):
+def capture_and_read_hlfb(bus, num_samples=None):
     """
     Handles the full HLFB capture and readback sequence.
     """
     print("\n--- Start HLFB Capture ---")
     try:
-        num_samples = int(input(f"Number of samples to capture (1-255): "))
+        # Accept num_samples as an optional parameter in case GUI calls this
+        # programmatically. If not provided, prompt the user.
+        if num_samples is None:
+            num_samples = int(input(f"Number of samples to capture (1-255): "))
         if not 1 <= num_samples <= 255:
             print("Error: Samples must be between 1 and 255.")
             return

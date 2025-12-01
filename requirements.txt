@@ -3,3 +3,4 @@ smbus2
 numpy
 scipy
 matplotlib
+PySide6
