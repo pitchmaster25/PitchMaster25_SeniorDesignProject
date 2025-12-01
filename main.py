@@ -1,8 +1,46 @@
 import motor_control
 import save_data_to_csv
 import encoder_control  # <--- NEW IMPORT
-from gpiozero import Button, DigitalOutputDevice
 import time
+import gui
+
+# Development mode toggle: when True, use MockFactory for gpiozero pins and
+# enable the Dummy I2C bus emulation in `motor_control` by passing DEV_MODE
+# into `init_bus`.
+DEV_MODE = True
+
+# GUI vs Terminal toggle: set to True to launch the PySide6 GUI instead of CLI
+GUI_MODE = True
+
+# GPIO setup: use MockFactory when DEV_MODE is True; otherwise try to import
+# the native gpiozero devices. Fall back to MockFactory only if native import
+# fails (keeps behavior robust on developer machines).
+if DEV_MODE:
+    try:
+        from gpiozero import Device
+        from gpiozero.pins.mock import MockFactory
+        Device.pin_factory = MockFactory()
+        from gpiozero import Button, DigitalOutputDevice
+        print("gpiozero: using MockFactory (no physical GPIO required) [DEV_MODE]")
+    except Exception as e:
+        print(f"DEV_MODE requested but MockFactory unavailable: {e}. Trying normal gpiozero import.")
+        from gpiozero import Button, DigitalOutputDevice
+else:
+    try:
+        from gpiozero import Button, DigitalOutputDevice
+    except Exception as e:
+        print(f"Failed to import gpiozero native backends: {e}. Attempting MockFactory fallback.")
+        try:
+            from gpiozero import Device
+            from gpiozero.pins.mock import MockFactory
+            Device.pin_factory = MockFactory()
+            from gpiozero import Button, DigitalOutputDevice
+            print("gpiozero: using MockFactory as fallback")
+        except Exception as e2:
+            print(f"Fallback MockFactory failed: {e2}")
+            raise
+
+# (DEV_MODE can be changed above; do not override it here.)
 
 # --- E-STOP CONFIGURATION ---
 E_STOP_PIN = 23
@@ -22,10 +60,11 @@ def emergency_stop_handler():
         motor_control.emergency_stop_motor(bus)
         print("Motor stopped.")
     else:
-        print("\n\n*** HARDWARE E-STOP DETECTED, but communication with PICO1 is not initalized! ***")
+        print("\n\n*** HARDWARE E-STOP DETECTED, but communication with PICO1 is not initialized! ***")
 
 # --------------------- ENTRY POINT ----------------------
 def main():
+    print("Starting PitchMaster25 Motor Control Interface")
     global bus
     global E_STOP_ACTIVATED
     global e_stop_button
@@ -36,10 +75,11 @@ def main():
         print(f"E-stop interrupt configured on BCM pin {E_STOP_PIN}")
     except Exception as e:
         print(f"Failed to set up E-Stop interrupt: {e}")
-        return
+        print("Continuing without hardware E-Stop (DEV_MODE or missing pin factory).")
+        e_stop_button = None
 
-    # Initialize the I2C bus
-    bus = motor_control.init_bus()
+    # Initialize the I2C bus (pass DEV_MODE to enable emulation)
+    bus = motor_control.init_bus(DEV_MODE)
     if bus is None:
         print("Failed to initialize I2C bus. Exiting.") 
         return
@@ -135,4 +175,7 @@ def main():
         motor_control.close_bus(bus)
 
 if __name__ == "__main__":
-    main()
+    if GUI_MODE:
+        gui.run_gui(DEV_MODE)
+    else:
+        main()

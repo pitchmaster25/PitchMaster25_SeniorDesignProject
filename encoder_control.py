@@ -49,12 +49,15 @@ def read_single_sample(i2c_bus):
         print("[Encoder] I2C Error during single shot.")
         return None
 
-def arm_encoder(i2c_bus):
+def arm_encoder(i2c_bus, samples: int = None):
     """
     Sends the command to Pico 2 to arm the trigger and prepare for recording.
+    If `samples` is provided it will be used; otherwise the function will
+    prompt the user (backwards-compatible).
     """
     try:
-        samples = int(input("Enter number of samples to record (default 200): ") or "200")
+        if samples is None:
+            samples = int(input("Enter number of samples to record (default 200): ") or "200")
         print(f"[Encoder] Sending ARM command to Pico 2 ({samples} samples)...")
         # Protocol: [CMD, NUM_SAMPLES]
         buf = bytearray(6)
