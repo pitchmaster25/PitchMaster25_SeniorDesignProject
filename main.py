@@ -7,7 +7,7 @@ import gui
 # Development mode toggle: when True, use MockFactory for gpiozero pins and
 # enable the Dummy I2C bus emulation in `motor_control` by passing DEV_MODE
 # into `init_bus`.
-DEV_MODE = True
+DEV_MODE = False
 
 # GUI vs Terminal toggle: set to True to launch the PySide6 GUI instead of CLI
 GUI_MODE = True

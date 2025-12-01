@@ -100,16 +100,17 @@ def read_encoder_data(i2c_bus):
                 # Request chunk at specific offset
                 lsb = offset & 0xFF
                 msb = (offset >> 8) & 0xFF
-                i2c_bus.write_i2c_block_data(PICO2_ADDR, CMD_READ_CHUNK, [lsb, msb])
+                i2c_bus.write_i2c_block_data(PICO2_ADDR, 0x00, [CMD_READ_CHUNK, lsb, msb])
                 
                 # Give Pico a tiny moment to fill buffer
                 time.sleep(0.005) 
                 
                 # Read response
-                read_msg = i2c_msg.read(PICO2_ADDR, 6)
-                i2c_bus.i2c_rdwr(read_msg)
-                
-                chunk_block = list(read_msg)
+                # read_msg = i2c_msg.read(PICO2_ADDR, 6)
+                # i2c_bus.i2c_rdwr(read_msg)
+                # chunk_block = list(read_msg)
+            
+                chunk_block = i2c_bus.read_i2c_block_data(PICO2_ADDR, 0, 6)
                 chunk_status = chunk_block[0]
                 
                 if chunk_status == STATUS_CHUNK:
