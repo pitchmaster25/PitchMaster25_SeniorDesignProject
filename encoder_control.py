@@ -24,10 +24,12 @@ def read_single_sample(i2c_bus):
     """
     try:
         # 1. Send the Single Shot Command
-        buf = bytearray(6)
-        buf[0] = CMD_SINGLE_SHOT
+        # buf = bytearray(6)
+        # buf[0] = CMD_SINGLE_SHOT
+        # print("Sending Command to PICO2: " & buf)
+        # i2c_bus.write_i2c_block_data(PICO2_ADDR, 0, buf)
         
-        i2c_bus.write_i2c_block_data(PICO2_ADDR, 0, buf)
+        i2c_bus.write_byte_data(PICO2_ADDR, 0, CMD_SINGLE_SHOT)
         
         # Wait 10ms for Pico to perform the SPI Triple-Read
         time.sleep(0.01)
@@ -37,12 +39,13 @@ def read_single_sample(i2c_bus):
         status = block[0]
         
         if status == STATUS_SINGLE_SHOT_READY:
-            # CHANGE 1: Used '<i'
             # < : Little Endian (Standard for ARM/Pico)
             # i : Signed Integer (Allows you to see -1 error codes)
             val = struct.unpack('<i', bytes(block[1:5]))[0]
             return val
-        
+        elif status == STATUS_ENCODER_IDLE:
+            print(f"[Encoder] Encoder is idle. Status: {hex(status)}")
+            return None
         else:
             print(f"[Encoder] Single shot failed. Status: {hex(status)}")
             return None
@@ -135,3 +138,14 @@ def read_encoder_data(i2c_bus):
     except OSError as e:
         print(f"[Encoder] I2C Communication Error: {e}")
         return []
+    
+    
+    
+if __name__ == "__main__":
+    print("Opening I2C Bus")
+    try:
+        with SMBus(1) as bus:
+            val = read_single_sample(bus)
+            print(val)
+    except FileNotFoundError:
+        print("IDK")

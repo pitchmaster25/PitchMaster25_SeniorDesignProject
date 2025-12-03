@@ -176,7 +176,15 @@ if __name__ == "__main__":
     # (e.g., "python sinusoidal_curve_fit.py")
     # It will NOT run when you "import sinusoidal_curve_fit"
 
-    run_demo()
+    # run_demo()
+    data = [0,1,2,1,0,-1,-2,-1,0]
+    corrected_data = np.array(data)
+    
+    length = len(data)
+    time = [i for i in range(1, length+1)]
+    corrected_time = np.array(time)
+    
+    fit_sinusoidal_to_data(corrected_time, corrected_data, True)
 
     input("\nPress Enter to Exit Program: ")
     exit()

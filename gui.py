@@ -164,7 +164,7 @@ class PitchMasterWindow(QtWidgets.QMainWindow):
         self.max_speed_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.max_speed_slider.setMinimum(0)
         # default slider max (rpm) — user can type values beyond this but slider will clamp
-        self._max_speed_slider_max = 12000
+        self._max_speed_slider_max = 4000
         self.max_speed_slider.setMaximum(self._max_speed_slider_max)
         self.max_speed_slider.setValue(0)
         self.max_speed_range_label = QtWidgets.QLabel(f'(Range: 0 - {self._max_speed_slider_max} rpm)')

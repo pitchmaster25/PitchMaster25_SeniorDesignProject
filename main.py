@@ -10,7 +10,7 @@ import gui
 DEV_MODE = False
 
 # GUI vs Terminal toggle: set to True to launch the PySide6 GUI instead of CLI
-GUI_MODE = True
+GUI_MODE = False
 
 # GPIO setup: use MockFactory when DEV_MODE is True; otherwise try to import
 # the native gpiozero devices. Fall back to MockFactory only if native import
