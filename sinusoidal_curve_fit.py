@@ -115,6 +115,8 @@ def fit_sinusoidal_to_data(t, data, show_plot=False):
               [fit_amplitude, fit_frequency, fit_phase, fit_mean]
     """
     print("--- Starting Sinusoidal Fit ---")
+    t = np.array(t)
+    data = np.array(data)
 
     # ---------------------- 1. Make Initial Guess -------------------------
     initial_guess = estimate_initial_guess(t, data)

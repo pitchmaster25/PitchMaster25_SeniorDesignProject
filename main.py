@@ -94,7 +94,7 @@ def main():
         max_speed = motor_control.configure_motor()
         
         while True:
-            command = input("\nType command (start, stop, arm, read_enc, hlfb, save, exit): ")
+            command = input("\nType command (start, stop, e, arm, read_enc, hlfb, save, exit): ")
             
             match command:
                 case "help":
@@ -105,8 +105,9 @@ def main():
     pos      = Reads the current position
     arm      = Arms Pico 2 to record encoder on triggers
     read_enc = Downloads recorded encoder data from Pico 2
-    hlfb     = Capture HLFB data
-    save     = Save data to CSV
+    hlfb     = Capture HLFB from motor and encoder data
+    save     = Save datasets to CSV
+    fit      = Fit the encoder data to a sinusoidal curse profile 
     exit     = Exit program''')
 
                 case "config":
@@ -157,6 +158,20 @@ def main():
                     print("Saving to CSV...")
                     # Ensure your save_data_to_csv.save function accepts the 4th argument!
                     save_data_to_csv.save(speed, angle_data, hlfb_data, encoder_data)
+                    
+                case "fit":
+                    print("Applying a sinusoidal curve fit to the encoder data...")
+                    if encoder_data:
+                        print("Data found:")
+                        encoder_data_length = len(encoder_data)
+                        encoder_time = []
+                        dt = 1/484
+                        for i in range(encoder_data_length):
+                            encoder_time.append(dt * i)
+                        sinusoidal_curve_fit.fit_sinusoidal_to_data(encoder_time, encoder_data, show_plot=True)
+                    else:
+                        print("Run the 'read_enc' command to collect the data from the encoder.")
+                
 
                 case "exit":
                     print("Stopping motor before exit...")

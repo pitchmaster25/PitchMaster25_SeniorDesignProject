@@ -40,9 +40,15 @@ def compile_data(speed, samples, date, angle_data, hlfb_data, encoder_data=None)
         ["Sample",          "Angle",    "HLFB"]
     ]
 
-    for i in range(0,data_points):
-        new_row = [i+1, angle_data[i], hlfb_data[i]]
-        input_data.append(new_row)
+    if encoder_data:
+        for i in range(0,data_points):
+            new_row = [i+1, encoder_data[i], hlfb_data[i]]
+            input_data.append(new_row)
+    else:
+        for i in range(0,data_points):
+            new_row = [i+1, "Null", hlfb_data[i]]
+            input_data.append(new_row)
+    
 
     # If encoder data supplied, append it as an additional section
     if encoder_data:

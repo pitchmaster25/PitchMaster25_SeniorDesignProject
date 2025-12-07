@@ -42,6 +42,14 @@ def read_single_sample(i2c_bus):
             # < : Little Endian (Standard for ARM/Pico)
             # i : Signed Integer (Allows you to see -1 error codes)
             val = struct.unpack('<i', bytes(block[1:5]))[0]
+            
+            # Convert the raw 12 bit angle into degrees
+            if val < 2049:
+                val = val*(360/4096)
+            else:
+                val = (val-4096)*(360/4096)
+                
+                
             return val
         elif status == STATUS_ENCODER_IDLE:
             print(f"[Encoder] Encoder is idle. Status: {hex(status)}")
@@ -128,8 +136,17 @@ def read_encoder_data(i2c_bus):
             count = len(collected_bytes) // 4
             
             # CHANGE 2: Used '<' for Little Endian and 'i' for Signed Int
-            integers = struct.unpack(f'<{count}i', collected_bytes)
-            return list(integers)
+            raw_val = struct.unpack(f'<{count}i', collected_bytes)
+            
+            angles_deg = []
+            for val in raw_val: # Convert the raw 12 bit angle into degrees
+                if val < 2049:
+                    angle = val*(360/4096)
+                else:
+                    angle = (val-4096)*(360/4096)
+                angles_deg.append(angle)
+                
+            return angles_deg
             
         else:
             print(f"[Encoder] Pico 2 reported unexpected status: {hex(status)}")
